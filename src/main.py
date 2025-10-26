@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.authorization.auth_router import router as auth_router
+from src.database.db_router import router as db_router
 
 app = FastAPI()
 app.include_router(auth_router)
+app.include_router(db_router)
 
 @app.get("/helloworld")
 async def get_hello_world():
