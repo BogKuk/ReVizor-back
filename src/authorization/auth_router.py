@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.authorization.auth_utils import verify_password, get_token
+from src.authorization.security import verify_password, get_token
 from src.database import schemas
 from src.database.db_main import get_session
 from src.database.repositories import AuthRepository
