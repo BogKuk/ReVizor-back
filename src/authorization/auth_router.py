@@ -1,9 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.authorization.security import verify_password, get_token
+from src.authorization.security import verify_password, get_tokens, refresh_token
 from src.database import schemas
 from src.database.db_main import get_session
 from src.database.repositories import AuthRepository
@@ -26,5 +26,14 @@ async def login(data: schemas.AuthAddSchema, repo: AuthRepository = Depends(get_
     if not user or not verify_password(data.password, user.password):
         raise HTTPException(status_code=401, detail="Incorrect login or password")
 
-    token = get_token(user.id)
-    return {"access_token": token}
+    response = await get_tokens(user.id)
+    return response
+
+
+@router.post("/refresh")
+async def refresh(request: Request):
+    try:
+        access_token = await refresh_token(request)
+        return {"access_token": access_token}
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
