@@ -23,7 +23,7 @@ async def get_auth_repo(session: AsyncSession = Depends(get_session)) -> AuthRep
 async def login(data: schemas.AuthAddSchema, repo: AuthRepository = Depends(get_auth_repo)):
     user = await repo.get_by_login(data.login)
 
-    if not user or not verify_password(data.password, user.password):
+    if not user or not await verify_password(data.password, user.password):
         raise HTTPException(status_code=401, detail="Incorrect login or password")
 
     response = await get_tokens(user.id)
