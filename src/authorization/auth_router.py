@@ -33,7 +33,7 @@ async def login(data: schemas.AuthAddSchema, repo: AuthRepository = Depends(get_
 @router.post("/refresh")
 async def refresh(request: Request):
     try:
-        access_token = await refresh_token(request)
-        return {"access_token": access_token}
+        response = await refresh_token(request)
+        return response
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))

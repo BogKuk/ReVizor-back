@@ -14,7 +14,7 @@ auth_config = AuthXConfig()
 auth_config.JWT_SECRET_KEY = settings.JWT_SECRET_KEY
 auth_config.JWT_ACCESS_COOKIE_NAME = "user_access_token"
 auth_config.JWT_REFRESH_COOKIE_NAME = "refresh_token"
-auth_config.JWT_TOKEN_LOCATION = ["cookies"]
+auth_config.JWT_TOKEN_LOCATION = ["headers"]
 auth_config.JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
 auth_config.JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
 
@@ -29,10 +29,13 @@ async def get_tokens(uid: Mapped[int]):
     access_token = security.create_access_token(uid=str(uid))
     refresh_token = security.create_refresh_token(uid=str(uid))
 
-    response = JSONResponse(content={"access_token": access_token})
-
-    security.set_refresh_cookies(refresh_token, response)
-
+    response = JSONResponse(
+        content={"ok": True},
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "X-Refresh-Token": f"Bearer {refresh_token}",
+        },
+    )
     return response
 
 
@@ -40,4 +43,8 @@ async def refresh_token(request: Request):
     refresh_payload = await security.refresh_token_required(request)
     access_token = security.create_access_token(refresh_payload.sub)
 
-    return access_token
+    response = JSONResponse(
+        content={"ok": True},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    return response
