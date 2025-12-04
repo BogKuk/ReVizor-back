@@ -2,7 +2,7 @@ from typing import Generic, TypeVar, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.models import AuthModel
+from src.database.models import AuthModel, ModelsModel
 
 T = TypeVar("T")
 
@@ -34,3 +34,35 @@ class AuthRepository(BaseRepository[AuthModel]):
         await self._add(new_user)
         await self.session.commit()
         return new_user
+
+
+class ModelsRepository(BaseRepository[ModelsModel]):
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def add(self, obj: ModelsModel) -> ModelsModel:
+        self.session.add(obj)
+        await self.session.flush()
+        return obj
+
+    async def get_by_id(self, id: int) -> Optional[ModelsModel]:
+        result = await self.session.execute(select(ModelsModel).where(ModelsModel.id == id))
+        return result.scalar_one_or_none()
+
+    async def get_by_user(self, user_id: int):
+        result = await self.session.execute(select(ModelsModel.id, ModelsModel.name).where(ModelsModel.user_id == user_id))
+        return result.all()
+
+    async def create_model(self, user_id: int, name: str, stored_name: str, report: dict | None = None) -> ModelsModel:
+        model = ModelsModel(user_id=user_id, name=name, stored_name=stored_name, report=report)
+        await self.add(model)
+        await self.session.commit()
+        return model
+
+    async def update_report(self, model_id: int, report: dict) -> Optional[ModelsModel]:
+        model = await self.get_by_id(model_id)
+        if not model:
+            return None
+        model.report = report
+        await self.session.commit()
+        return model
