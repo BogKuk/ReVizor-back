@@ -25,6 +25,10 @@ async def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 
+async def get_password_hash(plain_password: str) -> str:
+    return pwd_context.hash(plain_password)
+
+
 async def get_tokens(uid: Mapped[int]):
     access_token = security.create_access_token(uid=str(uid))
     refresh_token = security.create_refresh_token(uid=str(uid))
