@@ -7,10 +7,6 @@ app = FastAPI()
 app.include_router(auth_router)
 app.include_router(db_router)
 
-@app.get("/helloworld")
-async def get_hello_world():
-    return "hello world!"
-
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
