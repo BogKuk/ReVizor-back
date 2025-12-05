@@ -3,10 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.authorization.auth_router import router as auth_router
 from src.upload.upload_router import router as upload_router
 from src.analysis.analysis_router import router as analysis_router
+from src.database.db_router import router as db_router
 
 app = FastAPI()
 app.include_router(auth_router)
 app.include_router(upload_router)
+app.include_router(analysis_router)
+app.include_router(db_router)
 app.include_router(analysis_router)
 
 origins = [

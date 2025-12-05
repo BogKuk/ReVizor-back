@@ -7,7 +7,7 @@ from src.authorization.security import security
 from src.database.db_main import get_session
 from src.database.repositories import ModelsRepository
 
-router = APIRouter(prefix="/analysis", tags=["Analysis"])
+router = APIRouter(prefix="/analysis")
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
