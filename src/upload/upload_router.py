@@ -55,4 +55,5 @@ async def upload_model(
 
     return {
         "name": new_model.name,
+        "url": f"/models/{user_id}/{stored_name}",
     }

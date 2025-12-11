@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from src.authorization.auth_router import router as auth_router
 from src.upload.upload_router import router as upload_router
@@ -9,8 +10,8 @@ app = FastAPI()
 app.include_router(auth_router)
 app.include_router(upload_router)
 app.include_router(analysis_router)
-app.include_router(db_router)
-app.include_router(analysis_router)
+
+app.mount("/models", StaticFiles(directory="models"), name="models")
 
 origins = [
     "http://localhost:5173",
