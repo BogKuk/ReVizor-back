@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.authorization.security import security
@@ -28,3 +28,15 @@ async def get_model_names(
     rows = await repo.get_by_user(user_id)
     names = [row.name for row in rows]
     return names
+
+
+@router.get("/models/{model_id}/analysis")
+async def get_model_analysis(
+    model_id: int,
+    user_id: int = Depends(get_current_user_id),
+    repo: ModelsRepository = Depends(get_models_repo),
+):
+    model = await repo.get_by_id(model_id)
+    if not model or model.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return model.report if model.report is not None else {"message": "no analysis yet"}
