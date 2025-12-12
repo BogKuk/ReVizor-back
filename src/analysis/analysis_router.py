@@ -40,3 +40,15 @@ async def get_model_analysis(
     if not model or model.user_id != user_id:
         raise HTTPException(status_code=404, detail="Model not found")
     return model.report if model.report is not None else {"message": "no analysis yet"}
+
+
+@router.get("/models/{model_id}/url")
+async def get_model_url(
+    model_id: int,
+    user_id: int = Depends(get_current_user_id),
+    repo: ModelsRepository = Depends(get_models_repo),
+):
+    model = await repo.get_by_id(model_id)
+    if not model or model.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return {"name": model.name, "url": f"/models/{user_id}/{model.stored_name}"}
