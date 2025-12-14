@@ -66,3 +66,11 @@ class ModelsRepository(BaseRepository[ModelsModel]):
         model.report = report
         await self.session.commit()
         return model
+
+    async def delete_model(self, model_id: int) -> bool:
+        model = await self.get_by_id(model_id)
+        if not model:
+            return False
+        await self.session.delete(model)
+        await self.session.commit()
+        return True

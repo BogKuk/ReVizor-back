@@ -26,8 +26,7 @@ async def get_model_names(
     repo: ModelsRepository = Depends(get_models_repo),
 ):
     rows = await repo.get_by_user(user_id)
-    names = [row.name for row in rows]
-    return names
+    return [{"id": row.id, "name": row.name} for row in rows]
 
 
 @router.get("/models/{model_id}/analysis")

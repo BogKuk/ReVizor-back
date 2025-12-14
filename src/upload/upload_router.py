@@ -57,3 +57,26 @@ async def upload_model(
         "name": new_model.name,
         "url": f"/models/{user_id}/{stored_name}",
     }
+
+
+@router.delete("/{model_id}")
+async def delete_model(
+    model_id: int,
+    user_id: int = Depends(get_current_user_id),
+    repo: ModelsRepository = Depends(get_models_repo),
+):
+    model = await repo.get_by_id(model_id)
+    if not model or model.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    file_path = os.path.join(UPLOAD_ROOT, str(user_id), model.stored_name)
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+
+    deleted = await repo.delete_model(model_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return {"ok": True}
