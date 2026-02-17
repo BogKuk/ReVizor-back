@@ -1,5 +1,6 @@
 import os
 import uuid
+import shutil
 
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,10 +36,10 @@ async def upload_model(
     extension = os.path.splitext(original_name)[1]
     stored_name = f"{uuid.uuid4().hex}{extension}"
 
-    user_dir = os.path.join(UPLOAD_ROOT, str(user_id))
-    os.makedirs(user_dir, exist_ok=True)
+    model_dir = os.path.join(UPLOAD_ROOT, str(user_id), stored_name)
+    os.makedirs(model_dir, exist_ok=True)
 
-    save_path = os.path.join(user_dir, stored_name)
+    save_path = os.path.join(model_dir, stored_name)
 
     try:
         file_bytes = await file.read()
@@ -56,7 +57,7 @@ async def upload_model(
     return {
         "id": new_model.id,
         "name": new_model.name,
-        "url": f"/models/{user_id}/{stored_name}",
+        "url": f"/models/{user_id}/{stored_name}/{stored_name}",
     }
 
 
@@ -70,10 +71,13 @@ async def delete_model(
     if not model or model.user_id != user_id:
         raise HTTPException(status_code=404, detail="Model not found")
 
-    file_path = os.path.join(UPLOAD_ROOT, str(user_id), model.stored_name)
+    model_dir = os.path.join(UPLOAD_ROOT, str(user_id), model.stored_name)
+    legacy_file_path = os.path.join(UPLOAD_ROOT, str(user_id), model.stored_name)
     try:
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        if os.path.isdir(model_dir):
+            shutil.rmtree(model_dir)
+        elif os.path.exists(legacy_file_path):
+            os.remove(legacy_file_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
 

@@ -1,4 +1,5 @@
 from typing import Annotated
+import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,12 +10,13 @@ from src.database.repositories import ModelsRepository
 from src.analysis.schemas import AnalyzeParams
 from src.analysis.thresholds import get_thresholds
 from src.analysis.mesh_utils import (
-    get_model_path, 
-    load_mesh, 
-    compute_metrics, 
-    recolor_mesh_red, 
+    get_model_path,
+    get_model_variant_path,
+    load_mesh,
+    compute_metrics,
+    recolor_mesh_red,
     fix_and_color_inverted_polygons,
-    save_mesh
+    save_mesh,
 )
 from src.analysis.thresholds import THRESHOLDS
 
@@ -61,12 +63,23 @@ async def get_model_url(
     model = await repo.get_by_id(model_id)
     if not model or model.user_id != user_id:
         raise HTTPException(status_code=404, detail="Model not found")
-    
+
+    user_dir = os.path.join("models", str(user_id))
+    new_path = os.path.join(user_dir, model.stored_name, model.stored_name)
+    old_path = os.path.join(user_dir, model.stored_name)
+
+    if os.path.exists(new_path):
+        url = f"/models/{user_id}/{model.stored_name}/{model.stored_name}"
+    elif os.path.exists(old_path):
+        url = f"/models/{user_id}/{model.stored_name}"
+    else:
+        url = f"/models/{user_id}/{model.stored_name}/{model.stored_name}"
+
     res = {
         "name": model.name,
-        "url": f"/models/{user_id}/{model.stored_name}"
+        "url": url,
     }
-    
+
     if model.report and "recolored_model_url" in model.report:
         res["recolored_url"] = model.report["recolored_model_url"]
         
@@ -102,8 +115,8 @@ async def analyze_model(
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
 
-    recolored_name = f"recolored_{model.stored_name}.glb"
-    recolored_path = get_model_path(user_id, recolored_name)
+    recolored_name = "recolored.glb"
+    recolored_path = get_model_variant_path(user_id, model.stored_name, recolored_name)
     try:
         recolored_mesh = fix_and_color_inverted_polygons(mesh)
         save_mesh(recolored_mesh, recolored_path)
@@ -120,7 +133,7 @@ async def analyze_model(
 
     if recolored_name:
         import time
-        payload["recolored_model_url"] = f"/models/{user_id}/{recolored_name}?t={int(time.time())}"
+        payload["recolored_model_url"] = f"/models/{user_id}/{model.stored_name}/{recolored_name}?t={int(time.time())}"
 
     await repo.update_report(model_id, payload)
     return payload

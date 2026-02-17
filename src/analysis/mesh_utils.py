@@ -5,8 +5,20 @@ import trimesh
 
 UPLOAD_ROOT = "models"
 
-def get_model_path(user_id: int, stored_name: str) -> str:
+def get_model_dir(user_id: int, stored_name: str) -> str:
     return os.path.join(UPLOAD_ROOT, str(user_id), stored_name)
+
+def get_model_path(user_id: int, stored_name: str) -> str:
+    base_dir = get_model_dir(user_id, stored_name)
+    candidate = os.path.join(base_dir, stored_name)
+    if os.path.exists(candidate):
+        return candidate
+    return os.path.join(UPLOAD_ROOT, str(user_id), stored_name)
+
+def get_model_variant_path(user_id: int, stored_name: str, variant_name: str) -> str:
+    base_dir = get_model_dir(user_id, stored_name)
+    os.makedirs(base_dir, exist_ok=True)
+    return os.path.join(base_dir, variant_name)
 
 def load_mesh(path: str) -> trimesh.Trimesh:
     obj = trimesh.load(path, force="scene", skip_materials=True)
@@ -36,9 +48,7 @@ def recolor_mesh_red(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
 
 def fix_and_color_inverted_polygons(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
     working_mesh = mesh.copy()
-
     working_mesh.visual = trimesh.visual.ColorVisuals(mesh=working_mesh)
-
     working_mesh.merge_vertices()
 
     old_face_data = {}
@@ -48,26 +58,35 @@ def fix_and_color_inverted_polygons(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
 
     trimesh.repair.fix_winding(working_mesh)
     trimesh.repair.fix_normals(working_mesh)
-    
-    new_faces = working_mesh.faces
+
+    v = working_mesh.vertices
+    f = working_mesh.faces
     new_face_normals = working_mesh.face_normals
 
-    face_colors = np.full((len(new_faces), 4), [220, 220, 220, 255], dtype=np.uint8)
-
-    for i, face in enumerate(new_faces):
+    red_mask = np.zeros(len(f), dtype=bool)
+    for i, face in enumerate(f):
         key = tuple(sorted(face))
         if key in old_face_data:
             old_normal = old_face_data[key]
             new_normal = new_face_normals[i]
-
             dot = np.dot(old_normal, new_normal)
-
             if dot < -0.5:
-                face_colors[i] = [255, 0, 0, 255]
+                red_mask[i] = True
 
-    working_mesh.visual.face_colors = face_colors
-    
-    return working_mesh
+    new_vertices = v[f].reshape(-1, 3)
+    new_faces = np.arange(len(f) * 3, dtype=np.int64).reshape(-1, 3)
+    base_color = np.array([220, 220, 220, 255], dtype=np.uint8)
+    red_color = np.array([255, 0, 0, 255], dtype=np.uint8)
+    face_colors = np.where(red_mask[:, None], red_color, base_color)
+    vertex_colors = np.repeat(face_colors, 3, axis=0)
+
+    result = trimesh.Trimesh(
+        vertices=new_vertices,
+        faces=new_faces,
+        vertex_colors=vertex_colors,
+        process=False
+    )
+    return result
 
 def save_mesh(mesh: trimesh.Trimesh, path: str):
     mesh.export(path)
