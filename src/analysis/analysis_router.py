@@ -16,6 +16,7 @@ from src.analysis.mesh_utils import (
     compute_metrics,
     recolor_mesh_red,
     fix_and_color_inverted_polygons,
+    color_by_face_density,
     save_mesh,
 )
 from src.analysis.thresholds import THRESHOLDS
@@ -80,8 +81,11 @@ async def get_model_url(
         "url": url,
     }
 
-    if model.report and "recolored_model_url" in model.report:
-        res["recolored_url"] = model.report["recolored_model_url"]
+    if model.report:
+        if "recolored_model_url" in model.report:
+            res["recolored_url"] = model.report["recolored_model_url"]
+        if "density_model_url" in model.report:
+            res["density_url"] = model.report["density_model_url"]
         
     return res
 
@@ -123,6 +127,14 @@ async def analyze_model(
     except Exception as e:
         print(f"Error creating recolored mesh: {e}")
         recolored_name = None
+    density_name = "density.glb"
+    density_path = get_model_variant_path(user_id, model.stored_name, density_name)
+    try:
+        density_mesh = color_by_face_density(mesh)
+        save_mesh(density_mesh, density_path)
+    except Exception as e:
+        print(f"Error creating density mesh: {e}")
+        density_name = None
 
     payload = {
         "params": params.model_dump(),
@@ -134,6 +146,9 @@ async def analyze_model(
     if recolored_name:
         import time
         payload["recolored_model_url"] = f"/models/{user_id}/{model.stored_name}/{recolored_name}?t={int(time.time())}"
+    if density_name:
+        import time
+        payload["density_model_url"] = f"/models/{user_id}/{model.stored_name}/{density_name}?t={int(time.time())}"
 
     await repo.update_report(model_id, payload)
     return payload

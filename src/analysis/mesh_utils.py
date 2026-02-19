@@ -90,3 +90,35 @@ def fix_and_color_inverted_polygons(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
 
 def save_mesh(mesh: trimesh.Trimesh, path: str):
     mesh.export(path)
+
+def color_by_face_density(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
+    m = mesh.copy()
+    areas = getattr(m, "area_faces", None)
+    if areas is None:
+        tri = m.triangles
+        areas = trimesh.triangles.area(tri)
+    x = np.log(areas + 1e-12)
+    med = float(np.median(x))
+    mad = float(np.median(np.abs(x - med))) + 1e-6
+    d = (x - med) / (2.0 * mad)
+    d = np.clip(d, -1.0, 1.0)
+    base = np.array([180, 180, 180, 255], dtype=np.uint8)
+    red = np.array([255, 0, 0, 255], dtype=np.uint8)
+    blue = np.array([0, 64, 255, 255], dtype=np.uint8)
+    face_colors = np.zeros((len(d), 4), dtype=np.uint8)
+    for i, val in enumerate(d):
+        if val < 0:
+            t = -val
+            face_colors[i] = (base * (1 - t) + red * t).astype(np.uint8)
+        elif val > 0:
+            t = val
+            face_colors[i] = (base * (1 - t) + blue * t).astype(np.uint8)
+        else:
+            face_colors[i] = base
+    v = m.vertices
+    f = m.faces
+    new_vertices = v[f].reshape(-1, 3)
+    new_faces = np.arange(len(f) * 3, dtype=np.int64).reshape(-1, 3)
+    vertex_colors = np.repeat(face_colors, 3, axis=0)
+    res = trimesh.Trimesh(vertices=new_vertices, faces=new_faces, vertex_colors=vertex_colors, process=False)
+    return res
