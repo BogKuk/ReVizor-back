@@ -1,2 +1,2 @@
-# ReVizor backend
-test commit
+# Backend
+Серверная часть дипломного проекта

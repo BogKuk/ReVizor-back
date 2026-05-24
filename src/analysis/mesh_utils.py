@@ -534,12 +534,10 @@ def compute_uv_overlap(mesh: trimesh.Trimesh) -> float:
         return 0.0
     
     try:
-        # Суммарная площадь всех полигонов (с учетом наложений)
         total_area = sum(p.area for p in polygons)
         if total_area < 1e-12:
             return 0.0
 
-        # Площадь объединения (без наложений)
         union_poly = unary_union(polygons)
         union_area = union_poly.area
 
